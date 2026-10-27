@@ -240,6 +240,7 @@ li button:hover{color:var(--danger);box-shadow:none}
       <label><input type="checkbox" id="sound" checked> Lyd</label>
       <label><input type="checkbox" id="keepAwakeBox" checked> Hold våken i bakgrunnen</label>
       <button class="ghost" id="notifBtn" hidden>Gi meg varsler på PC-en</button>
+      <button class="ghost" id="lampBtn" hidden>Koble til lampe</button>
     </div>
   </section>
 
@@ -460,6 +461,31 @@ $('autoNext').onchange=e=>{S.auto=e.target.checked;save()};
 $('sound').onchange=e=>{S.sound=e.target.checked;save()};
 $('keepAwakeBox').onchange=e=>{S.keepAwake=e.target.checked;save();unlockAudio();keepAwake(S.keepAwake)};
 $('notifBtn').onclick=async()=>{try{await Notification.requestPermission()}catch(e){} render()};
+
+/* --- lamp: Galactic Unicorn on USB (Web Serial). Write-only; see lampe/main.py for the format. --- */
+let lampW=null;
+function lampMsg(){
+  const st=S.status;
+  if(st!=='running'&&st!=='paused')return {p:'idle'};
+  const m={p:st==='paused'?'paused':PLAN[S.idx].type,left:Math.round(remainingNow()/1000)};
+  if(st==='running')m.free=hm(S.endAt);
+  return m;
+}
+function lampSend(){
+  if(lampW)lampW.write(new TextEncoder().encode(JSON.stringify(lampMsg())+'\n')).catch(lampDrop);
+}
+function lampDrop(){lampW=null;renderLamp()}
+async function lampOpen(port){
+  try{await port.open({baudRate:115200});lampW=port.writable.getWriter();lampSend()}catch(e){lampW=null}
+  renderLamp();
+}
+function renderLamp(){const b=$('lampBtn');b.hidden=!('serial' in navigator);b.disabled=!!lampW;b.textContent=lampW?'Lampe tilkoblet':'Koble til lampe'}
+if('serial' in navigator){
+  $('lampBtn').onclick=async()=>{try{await lampOpen(await navigator.serial.requestPort())}catch(e){}};
+  navigator.serial.addEventListener('disconnect',lampDrop);
+  navigator.serial.addEventListener('connect',e=>{if(!lampW)lampOpen(e.target)});
+  navigator.serial.getPorts().then(ps=>{if(ps[0])lampOpen(ps[0])}).catch(()=>{});
+}
 
 /* --- task log: tied to each break (what was done in the focus block before it) --- */
 function logBreakIdx(){
@@ -862,7 +888,7 @@ function render(){
   let showN=false;try{showN='Notification' in window&&Notification.permission==='default'}catch(e){}
   $('notifBtn').hidden=!showN;
   if(st!=='running')document.title=st==='paused'?'På vent · Gi meg litt fred':(flashTimer?document.title:'Gi meg litt fred');
-  renderClock(); renderLog(); startLoop();
+  renderClock(); renderLog(); startLoop(); renderLamp(); lampSend();
   if(justFinished&&!$('export').hidden){justFinished=false;try{$('export').scrollIntoView({behavior:'smooth',block:'start'})}catch(e){}}
   justFinished=false;
 }
