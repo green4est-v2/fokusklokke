@@ -61,13 +61,24 @@ def run():
 
     gu = GalacticUnicorn()
     g = PicoGraphics(DISPLAY)
-    gu.set_brightness(0.4)  # full white draws over 1 A, more than a PC USB port gives
+    gu.set_brightness(0.4)
     black = g.create_pen(0, 0, 0)
+    glow = False  # A: coloured panel with dark text, B: dark panel with glowing text
     poll = select.poll()
     poll.register(sys.stdin, select.POLLIN)
 
     state, left_ms, free, since = "idle", 0, "", time.ticks_ms()
     while True:
+        if gu.is_pressed(GalacticUnicorn.SWITCH_A):
+            glow = False
+        if gu.is_pressed(GalacticUnicorn.SWITCH_B):
+            glow = True
+        step = (0.01 if gu.is_pressed(GalacticUnicorn.SWITCH_BRIGHTNESS_UP) else 0) - \
+               (0.01 if gu.is_pressed(GalacticUnicorn.SWITCH_BRIGHTNESS_DOWN) else 0)
+        if step:
+            # ceiling: a full coloured panel above ~0.6 draws more than a PC USB port gives
+            gu.set_brightness(min(0.6, max(0.05, gu.get_brightness() + step)))
+
         if poll.poll(0):
             msg = parse(sys.stdin.readline())
             if msg:
@@ -86,9 +97,10 @@ def run():
             k = 0.35 + 0.65 * abs((now // 20) % 100 - 50) / 50
             r, gr, b = int(r * k), int(gr * k), int(b * k)
 
-        g.set_pen(g.create_pen(r, gr, b))
+        colour = g.create_pen(r, gr, b)
+        g.set_pen(black if glow else colour)
         g.clear()
-        g.set_pen(black)
+        g.set_pen(colour if glow else black)
         g.set_font("bitmap8")
         y = 2
         if g.measure_text(text, 1) > GalacticUnicorn.WIDTH:
