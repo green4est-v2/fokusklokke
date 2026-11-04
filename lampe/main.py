@@ -11,6 +11,7 @@ COLOURS = {
     "idle": (31, 175, 148),
 }
 LABELS = {"focus": "FOKUS", "break": "PAUSE", "paused": "VENT", "idle": "LEDIG"}
+SIGNS = {"C": ("Kaffepaus", (160, 82, 30)), "D": ("Lunsj!", (255, 255, 255))}
 MAX_LEFT = 4 * 3600
 MAX_LINE = 200
 
@@ -63,16 +64,16 @@ def run():
     g = PicoGraphics(DISPLAY)
     gu.set_brightness(0.4)
     black = g.create_pen(0, 0, 0)
-    glow = False  # A: coloured panel with dark text, B: dark panel with glowing text
+    # A: timer, coloured panel. B: timer, glowing text. C/D: fixed signs from SIGNS.
+    mode = "A"
     poll = select.poll()
     poll.register(sys.stdin, select.POLLIN)
 
     state, left_ms, free, since = "idle", 0, "", time.ticks_ms()
     while True:
-        if gu.is_pressed(GalacticUnicorn.SWITCH_A):
-            glow = False
-        if gu.is_pressed(GalacticUnicorn.SWITCH_B):
-            glow = True
+        for name in "ABCD":
+            if gu.is_pressed(getattr(GalacticUnicorn, "SWITCH_" + name)):
+                mode = name
         step = (0.01 if gu.is_pressed(GalacticUnicorn.SWITCH_BRIGHTNESS_UP) else 0) - \
                (0.01 if gu.is_pressed(GalacticUnicorn.SWITCH_BRIGHTNESS_DOWN) else 0)
         if step:
@@ -93,11 +94,14 @@ def run():
         lines = texts(state, (remaining + 999) // 1000, free)
         text = lines[(now // 2500) % len(lines)]
         r, gr, b = COLOURS[state]
-        if state == "paused":  # pulse so a paused session reads differently from a break
+        if mode in SIGNS:  # signs always glow: a full white panel would overload the USB port
+            text, (r, gr, b) = SIGNS[mode]
+        elif state == "paused":  # pulse so a paused session reads differently from a break
             k = 0.35 + 0.65 * abs((now // 20) % 100 - 50) / 50
             r, gr, b = int(r * k), int(gr * k), int(b * k)
 
         colour = g.create_pen(r, gr, b)
+        glow = mode != "A"
         g.set_pen(black if glow else colour)
         g.clear()
         g.set_pen(colour if glow else black)
