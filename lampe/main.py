@@ -11,7 +11,7 @@ COLOURS = {
     "idle": (31, 175, 148),
 }
 LABELS = {"focus": "FOKUS", "break": "PAUSE", "paused": "VENT", "idle": "LEDIG"}
-SIGNS = {"C": ("Kaffepaus", (160, 82, 30)), "D": ("Lunsj!", (255, 255, 255))}
+SIGNS = {"C": ("OPPTATT", (30, 80, 255)), "D": ("Lunsj!", (255, 255, 255))}
 SPEED = 20  # ticker speed, pixels per second
 GAP = 16  # blank pixels between the end of the ticker text and its next start
 MAX_LEFT = 4 * 3600

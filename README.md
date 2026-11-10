@@ -8,6 +8,6 @@ Combining a self made pomodo app with a PICO 2 W galaxy unicorn that shows time 
 
 What the lamp shows: red **FOKUS** with minutes left and when you're free, amber **PAUSE**, pulsing amber **VENT** when paused, green **LEDIG** otherwise. If the browser closes, the lamp keeps counting down and then shows LEDIG.
 
-Buttons on the back: **A** coloured panel with dark text, **B** dark panel with glowing text, **C** a brown "Kaffepaus" sign, **D** a white "Lunsj!" sign, **LUX +/−** brightness (hold to adjust). Press A or B to go back to the timer; it keeps counting in the background. Mode and brightness reset when the lamp loses power.
+Buttons on the back: **A** coloured panel with dark text, **B** dark panel with glowing text, **C** a blue "OPPTATT" sign, **D** a white "Lunsj!" sign, **LUX +/−** brightness (hold to adjust). Press A or B to go back to the timer; it keeps counting in the background. Mode and brightness reset when the lamp loses power.
 
 Test the lamp's message parser on a PC: `python lampe/test_main.py`
