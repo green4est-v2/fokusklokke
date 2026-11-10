@@ -3,7 +3,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
-from main import parse, texts  # noqa: E402
+from main import parse, scroll, texts  # noqa: E402
 
 assert parse('{"p":"focus","left":720,"free":"14:35"}') == ("focus", 720, "14:35")
 assert parse('{"p":"break","left":300,"free":"9:05"}') == ("break", 300, "9:05")
@@ -19,4 +19,6 @@ assert texts("idle", 0, "") == ["LEDIG"]
 assert texts("focus", 720, "14:35") == ["FOKUS", "12 min", "til 14:35"]
 assert texts("focus", 61, "") == ["FOKUS", "2 min"]
 assert texts("break", 45, "") == ["PAUSE", "45 s"]
+assert scroll(0, 1000, 100) == -20  # SPEED px per second
+assert scroll(-95, 1000, 100) == -15  # wraps once a whole text width + GAP has passed
 print("ok")

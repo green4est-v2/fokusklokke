@@ -12,6 +12,8 @@ COLOURS = {
 }
 LABELS = {"focus": "FOKUS", "break": "PAUSE", "paused": "VENT", "idle": "LEDIG"}
 SIGNS = {"C": ("Kaffepaus", (160, 82, 30)), "D": ("Lunsj!", (255, 255, 255))}
+SPEED = 20  # ticker speed, pixels per second
+GAP = 16  # blank pixels between the end of the ticker text and its next start
 MAX_LEFT = 4 * 3600
 MAX_LINE = 200
 
@@ -53,6 +55,12 @@ def texts(state, left_s, free):
     return t
 
 
+def scroll(x, dt_ms, unit):
+    """Move the ticker left by dt_ms worth of SPEED, wrapping after one text width + GAP."""
+    x -= SPEED * dt_ms / 1000
+    return x + unit if x <= -unit else x
+
+
 def run():
     import sys
     import select
@@ -70,6 +78,7 @@ def run():
     poll.register(sys.stdin, select.POLLIN)
 
     state, left_ms, free, since = "idle", 0, "", time.ticks_ms()
+    x, last = 0, time.ticks_ms()
     while True:
         for name in "ABCD":
             if gu.is_pressed(getattr(GalacticUnicorn, "SWITCH_" + name)):
@@ -87,12 +96,13 @@ def run():
                 left_ms, since = left * 1000, time.ticks_ms()
 
         now = time.ticks_ms()
+        dt, last = time.ticks_diff(now, last), now
         remaining = left_ms if state == "paused" else max(0, left_ms - time.ticks_diff(now, since))
         if state in ("focus", "break") and remaining == 0:
             state = "idle"
 
         lines = texts(state, (remaining + 999) // 1000, free)
-        text = lines[(now // 2500) % len(lines)]
+        text = "   ".join(lines)
         r, gr, b = COLOURS[state]
         if mode in SIGNS:  # signs always glow: a full white panel would overload the USB port
             text, (r, gr, b) = SIGNS[mode]
@@ -106,11 +116,13 @@ def run():
         g.clear()
         g.set_pen(colour if glow else black)
         g.set_font("bitmap8")
-        y = 2
-        if g.measure_text(text, 1) > GalacticUnicorn.WIDTH:
-            g.set_font("bitmap6")
-            y = 3
-        g.text(text, (GalacticUnicorn.WIDTH - g.measure_text(text, 1)) // 2, y, -1, 1)
+        w = g.measure_text(text, 1)
+        if w <= GalacticUnicorn.WIDTH:  # fits: stand still in the middle
+            g.text(text, (GalacticUnicorn.WIDTH - w) // 2, 2, -1, 1)
+        else:  # too wide: run as a ticker, drawn twice so the next pass follows straight on
+            x = scroll(x, dt, w + GAP)
+            g.text(text, int(x), 2, -1, 1)
+            g.text(text, int(x) + w + GAP, 2, -1, 1)
         gu.update(g)
         time.sleep(0.02)  # the USB serial link stalls if the loop never sleeps
 
